@@ -146,8 +146,8 @@ class _ImageHolderWidget extends StatelessWidget {
               },
             ),
             Positioned(
-              top: 45,
-              right: 60,
+              bottom: 45,
+              right: 45,
               child: InkWell(
                 onTap: () => Navigator.pop(context),
                 child: CircleAvatar(
