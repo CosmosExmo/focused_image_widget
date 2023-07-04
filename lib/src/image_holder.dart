@@ -3,11 +3,13 @@ part of focused_image_widget;
 class ImageHolder extends StatefulWidget {
   final DecorationImage? image;
   final Widget child;
+  final bool closeOnTap;
 
   const ImageHolder({
     Key? key,
     required this.child,
     this.image,
+    this.closeOnTap = false,
   }) : super(key: key);
 
   @override
@@ -20,6 +22,7 @@ class _ImageHolderState extends State<ImageHolder> {
   Offset childEndOffset = Offset(0, 0);
   late Size imageContainerSize;
   late Size childSize;
+  bool get closeOnTap => widget.closeOnTap;
 
   void _getOffset() {
     RenderBox childRenderBox =
@@ -72,6 +75,7 @@ class _ImageHolderState extends State<ImageHolder> {
               childEndOffset: childEndOffset,
               imageContainerSize: imageContainerSize,
               childSize: childSize,
+              closeOnTap: closeOnTap,
             ),
           );
         },
@@ -88,15 +92,17 @@ class _ImageHolderWidget extends StatelessWidget {
   final Offset childEndOffset;
   final Size imageContainerSize;
   final Size childSize;
+  final bool closeOnTap;
 
-  const _ImageHolderWidget({
-    Key? key,
-    required this.image,
-    required this.childOriginOffset,
-    required this.childEndOffset,
-    required this.imageContainerSize,
-    required this.childSize,
-  }) : super(key: key);
+  const _ImageHolderWidget(
+      {Key? key,
+      required this.image,
+      required this.childOriginOffset,
+      required this.childEndOffset,
+      required this.imageContainerSize,
+      required this.childSize,
+      required this.closeOnTap})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -107,7 +113,7 @@ class _ImageHolderWidget extends StatelessWidget {
           fit: StackFit.expand,
           children: <Widget>[
             GestureDetector(
-              onTap: () => Navigator.pop(context),
+              onTap: closeOnTap ? () => Navigator.pop(context) : null,
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
                 child: Container(color: Colors.black.withOpacity(0.7)),
