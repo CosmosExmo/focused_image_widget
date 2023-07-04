@@ -4,12 +4,14 @@ class ImageHolder extends StatefulWidget {
   final DecorationImage? image;
   final Widget child;
   final bool closeOnTap;
+  final void Function()? onEnd;
 
   const ImageHolder({
     Key? key,
     required this.child,
     this.image,
     this.closeOnTap = false,
+    this.onEnd,
   }) : super(key: key);
 
   @override
@@ -23,6 +25,7 @@ class _ImageHolderState extends State<ImageHolder> {
   late Size imageContainerSize;
   late Size childSize;
   bool get closeOnTap => widget.closeOnTap;
+  void Function()? get onEnd => widget.onEnd;
 
   void _getOffset() {
     RenderBox childRenderBox =
@@ -76,6 +79,7 @@ class _ImageHolderState extends State<ImageHolder> {
               imageContainerSize: imageContainerSize,
               childSize: childSize,
               closeOnTap: closeOnTap,
+              onEnd: onEnd,
             ),
           );
         },
@@ -93,6 +97,7 @@ class _ImageHolderWidget extends StatelessWidget {
   final Size imageContainerSize;
   final Size childSize;
   final bool closeOnTap;
+  final void Function()? onEnd;
 
   const _ImageHolderWidget(
       {Key? key,
@@ -101,7 +106,8 @@ class _ImageHolderWidget extends StatelessWidget {
       required this.childEndOffset,
       required this.imageContainerSize,
       required this.childSize,
-      required this.closeOnTap})
+      required this.closeOnTap,
+      required this.onEnd})
       : super(key: key);
 
   @override
@@ -121,6 +127,7 @@ class _ImageHolderWidget extends StatelessWidget {
             ),
             TweenAnimationBuilder<Offset>(
               tween: Tween(begin: childOriginOffset, end: childEndOffset),
+              onEnd: onEnd,
               duration: Duration(milliseconds: 200),
               builder: (context, value, _) {
                 return Positioned(
