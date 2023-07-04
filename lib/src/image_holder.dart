@@ -128,12 +128,15 @@ class _ImageHolderWidget extends StatelessWidget {
                         boundaryMargin: EdgeInsets.all(20),
                         minScale: 0.1,
                         maxScale: 3.0,
-                        child: Container(
-                          width: value1.width,
-                          height: value1.height,
-                          decoration: BoxDecoration(
-                            image: image,
-                            borderRadius: BorderRadius.circular(12),
+                        child: GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            width: value1.width,
+                            height: value1.height,
+                            decoration: BoxDecoration(
+                              image: image,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                         ),
                       );
