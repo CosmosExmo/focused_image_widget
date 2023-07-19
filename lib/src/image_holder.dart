@@ -1,24 +1,26 @@
 part of focused_image_widget;
 
 class ImageHolder extends StatefulWidget {
-  final DecorationImage? image;
+  final List<DecorationImage> images;
   final Widget child;
   final bool closeOnTap;
   final void Function()? onEnd;
+  final void Function()? onClose;
 
   const ImageHolder({
     Key? key,
     required this.child,
-    this.image,
+    required this.images,
     this.closeOnTap = false,
     this.onEnd,
+    this.onClose,
   }) : super(key: key);
 
   @override
   _ImageHolderState createState() => _ImageHolderState();
 }
 
-class _ImageHolderState extends State<ImageHolder> {
+class _ImageHolderState extends State<ImageHolder> with WidgetsBindingObserver {
   GlobalKey containerKey = GlobalKey();
   Offset childOriginOffset = Offset(0, 0);
   Offset childEndOffset = Offset(0, 0);
@@ -26,6 +28,21 @@ class _ImageHolderState extends State<ImageHolder> {
   late Size childSize;
   bool get closeOnTap => widget.closeOnTap;
   void Function()? get onEnd => widget.onEnd;
+  void Function()? get onClose => widget.onClose;
+  List<DecorationImage> get images => widget.images;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    context.read<ImageHolderViewModel>().getData();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
   void _getOffset() {
     RenderBox childRenderBox =
@@ -55,11 +72,15 @@ class _ImageHolderState extends State<ImageHolder> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      key: containerKey,
-      onTap: widget.image != null ? () => openMenu(context) : null,
-      child: widget.child,
-    );
+    return ChangeNotifierProvider(
+        create: (context) => ImageHolderViewModel(images: images),
+        builder: (context, _) {
+          return GestureDetector(
+            key: containerKey,
+            onTap: () => openMenu(context),
+            child: widget.child,
+          );
+        });
   }
 
   Future openMenu(BuildContext context) async {
@@ -73,7 +94,6 @@ class _ImageHolderState extends State<ImageHolder> {
           return FadeTransition(
             opacity: animation,
             child: _ImageHolderWidget(
-              image: widget.image,
               childOriginOffset: childOriginOffset,
               childEndOffset: childEndOffset,
               imageContainerSize: imageContainerSize,
@@ -91,7 +111,6 @@ class _ImageHolderState extends State<ImageHolder> {
 }
 
 class _ImageHolderWidget extends StatelessWidget {
-  final DecorationImage? image;
   final Offset childOriginOffset;
   final Offset childEndOffset;
   final Size imageContainerSize;
@@ -99,19 +118,22 @@ class _ImageHolderWidget extends StatelessWidget {
   final bool closeOnTap;
   final void Function()? onEnd;
 
-  const _ImageHolderWidget(
-      {Key? key,
-      required this.image,
-      required this.childOriginOffset,
-      required this.childEndOffset,
-      required this.imageContainerSize,
-      required this.childSize,
-      required this.closeOnTap,
-      required this.onEnd})
-      : super(key: key);
+  const _ImageHolderWidget({
+    Key? key,
+    required this.childOriginOffset,
+    required this.childEndOffset,
+    required this.imageContainerSize,
+    required this.childSize,
+    required this.closeOnTap,
+    required this.onEnd,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    popper() {
+      Navigator.pop(context);
+    }
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Container(
@@ -119,7 +141,7 @@ class _ImageHolderWidget extends StatelessWidget {
           fit: StackFit.expand,
           children: <Widget>[
             GestureDetector(
-              onTap: closeOnTap ? () => Navigator.pop(context) : null,
+              onTap: closeOnTap ? () => popper() : null,
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
                 child: Container(color: Colors.black.withOpacity(0.7)),
@@ -142,12 +164,14 @@ class _ImageHolderWidget extends StatelessWidget {
                         minScale: 0.1,
                         maxScale: 3.0,
                         child: GestureDetector(
-                          onTap: () => Navigator.pop(context),
+                          onTap: () => popper(),
                           child: Container(
                             width: value1.width,
                             height: value1.height,
                             decoration: BoxDecoration(
-                              image: image,
+                              image: context
+                                  .watch<ImageHolderViewModel>()
+                                  .currentImage,
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
@@ -158,11 +182,49 @@ class _ImageHolderWidget extends StatelessWidget {
                 );
               },
             ),
+            Selector<ImageHolderViewModel, bool>(
+                builder: (context, enabled, child) {
+                  if (enabled) {
+                    return Positioned(
+                      bottom: 100,
+                      right: 45,
+                      child: InkWell(
+                        onTap: () =>
+                            context.read<ImageHolderViewModel>().next(),
+                        child: CircleAvatar(
+                          backgroundColor: Theme.of(context).primaryColor,
+                          child: Icon(Icons.arrow_forward),
+                        ),
+                      ),
+                    );
+                  }
+                  return SizedBox.shrink();
+                },
+                selector: (_, model) => model.nextButtonEnabled),
+            Selector<ImageHolderViewModel, bool>(
+                builder: (context, enabled, child) {
+                  if (enabled) {
+                    return Positioned(
+                      bottom: 100,
+                      left: 45,
+                      child: InkWell(
+                        onTap: () =>
+                            context.read<ImageHolderViewModel>().previous(),
+                        child: CircleAvatar(
+                          backgroundColor: Theme.of(context).primaryColor,
+                          child: Icon(Icons.arrow_back),
+                        ),
+                      ),
+                    );
+                  }
+                  return SizedBox.shrink();
+                },
+                selector: (_, model) => model.previousButtonEnabled),
             Positioned(
               bottom: 45,
               right: 45,
               child: InkWell(
-                onTap: () => Navigator.pop(context),
+                onTap: () => popper(),
                 child: CircleAvatar(
                   backgroundColor: Theme.of(context).primaryColor,
                   child: Icon(Icons.close),
