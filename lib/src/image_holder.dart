@@ -20,7 +20,7 @@ class ImageHolder extends StatefulWidget {
   _ImageHolderState createState() => _ImageHolderState();
 }
 
-class _ImageHolderState extends State<ImageHolder> with WidgetsBindingObserver {
+class _ImageHolderState extends State<ImageHolder> {
   GlobalKey containerKey = GlobalKey();
   Offset childOriginOffset = Offset(0, 0);
   Offset childEndOffset = Offset(0, 0);
@@ -31,18 +31,6 @@ class _ImageHolderState extends State<ImageHolder> with WidgetsBindingObserver {
   void Function()? get onClose => widget.onClose;
   List<DecorationImage> get images => widget.images;
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    context.read<ImageHolderViewModel>().getData();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
 
   void _getOffset() {
     RenderBox childRenderBox =
