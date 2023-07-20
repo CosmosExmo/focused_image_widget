@@ -8,10 +8,6 @@ class ImageHolderViewModel with ChangeNotifier {
 
   bool get nextButtonEnabled => currentIndex < images.length - 1;
   bool get previousButtonEnabled => currentIndex > 0;
-  void disposeModel() {}
-  Future<void> getData() async {
-    print("hello");
-  }
 
   next() {
     if (currentIndex < images.length - 1) {
