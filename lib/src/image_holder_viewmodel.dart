@@ -8,6 +8,7 @@ class ImageHolderViewModel with ChangeNotifier {
 
   bool get nextButtonEnabled => currentIndex < images.length - 1;
   bool get previousButtonEnabled => currentIndex > 0;
+  bool get multipleImages => images.length > 1;
 
   next() {
     if (currentIndex < images.length - 1) {

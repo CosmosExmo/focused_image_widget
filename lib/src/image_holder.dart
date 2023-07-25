@@ -31,7 +31,6 @@ class _ImageHolderState extends State<ImageHolder> {
   void Function()? get onClose => widget.onClose;
   List<DecorationImage> get images => widget.images;
 
-
   void _getOffset() {
     RenderBox childRenderBox =
         containerKey.currentContext!.findRenderObject() as RenderBox;
@@ -60,15 +59,11 @@ class _ImageHolderState extends State<ImageHolder> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-        create: (context) => ImageHolderViewModel(images: images),
-        builder: (context, _) {
-          return GestureDetector(
-            key: containerKey,
-            onTap: () => openMenu(context),
-            child: widget.child,
-          );
-        });
+    return GestureDetector(
+      key: containerKey,
+      onTap: () => openMenu(context),
+      child: widget.child,
+    );
   }
 
   Future openMenu(BuildContext context) async {
@@ -81,13 +76,20 @@ class _ImageHolderState extends State<ImageHolder> {
           animation = Tween(begin: 0.0, end: 1.0).animate(animation);
           return FadeTransition(
             opacity: animation,
-            child: _ImageHolderWidget(
-              childOriginOffset: childOriginOffset,
-              childEndOffset: childEndOffset,
-              imageContainerSize: imageContainerSize,
-              childSize: childSize,
-              closeOnTap: closeOnTap,
-              onEnd: onEnd,
+            child: ChangeNotifierProvider(
+              create: (context) => ImageHolderViewModel(images: images),
+              builder: (context, _) {
+                return _ImageHolderWidget(
+                  childOriginOffset: childOriginOffset,
+                  childEndOffset: childEndOffset,
+                  imageContainerSize: imageContainerSize,
+                  childSize: childSize,
+                  closeOnTap: closeOnTap,
+                  onPop: onClose,
+                  onEnd: onEnd,
+                );
+              },
+              child: widget.child,
             ),
           );
         },
@@ -105,6 +107,7 @@ class _ImageHolderWidget extends StatelessWidget {
   final Size childSize;
   final bool closeOnTap;
   final void Function()? onEnd;
+  final void Function()? onPop;
 
   const _ImageHolderWidget({
     Key? key,
@@ -113,12 +116,14 @@ class _ImageHolderWidget extends StatelessWidget {
     required this.imageContainerSize,
     required this.childSize,
     required this.closeOnTap,
+    required this.onPop,
     required this.onEnd,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     popper() {
+      onPop?.call();
       Navigator.pop(context);
     }
 
@@ -135,41 +140,58 @@ class _ImageHolderWidget extends StatelessWidget {
                 child: Container(color: Colors.black.withOpacity(0.7)),
               ),
             ),
-            TweenAnimationBuilder<Offset>(
-              tween: Tween(begin: childOriginOffset, end: childEndOffset),
-              onEnd: onEnd,
-              duration: Duration(milliseconds: 200),
-              builder: (context, value, _) {
-                return Positioned(
-                  top: value.dy,
-                  left: value.dx,
-                  child: TweenAnimationBuilder<Size>(
-                    duration: const Duration(milliseconds: 200),
-                    tween: Tween(begin: childSize, end: imageContainerSize),
-                    builder: (context, value1, _) {
-                      return InteractiveViewer(
-                        boundaryMargin: EdgeInsets.all(20),
-                        minScale: 0.1,
-                        maxScale: 3.0,
-                        child: GestureDetector(
-                          onTap: () => popper(),
-                          child: Container(
-                            width: value1.width,
-                            height: value1.height,
-                            decoration: BoxDecoration(
-                              image: context
-                                  .watch<ImageHolderViewModel>()
-                                  .currentImage,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
+            Selector<ImageHolderViewModel, DecorationImage>(
+                selector: (_, model) => model.currentImage,
+                builder: (context, decorationImage, child) {
+                  return TweenAnimationBuilder<Offset>(
+                    tween: Tween(begin: childOriginOffset, end: childEndOffset),
+                    onEnd: onEnd,
+                    duration: Duration(milliseconds: 200),
+                    builder: (context, value, _) {
+                      return Positioned(
+                        top: value.dy,
+                        left: value.dx,
+                        child: TweenAnimationBuilder<Size>(
+                          duration: const Duration(milliseconds: 200),
+                          tween:
+                              Tween(begin: childSize, end: imageContainerSize),
+                          builder: (__, value1, _) {
+                            return InteractiveViewer(
+                              boundaryMargin: EdgeInsets.all(20),
+                              minScale: 0.1,
+                              maxScale: 3.0,
+                              child: GestureDetector(
+                                onTap: () => popper(),
+                                onHorizontalDragEnd: context
+                                        .read<ImageHolderViewModel>()
+                                        .multipleImages
+                                    ? (details) {
+                                        if ((details.primaryVelocity ?? 0) <= 0)
+                                          context
+                                              .read<ImageHolderViewModel>()
+                                              .next();
+                                        else
+                                          context
+                                              .read<ImageHolderViewModel>()
+                                              .previous();
+                                      }
+                                    : null,
+                                child: Container(
+                                  width: value1.width,
+                                  height: value1.height,
+                                  decoration: BoxDecoration(
+                                    image: decorationImage,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       );
                     },
-                  ),
-                );
-              },
-            ),
+                  );
+                }),
             Selector<ImageHolderViewModel, bool>(
                 builder: (context, enabled, child) {
                   if (enabled) {
