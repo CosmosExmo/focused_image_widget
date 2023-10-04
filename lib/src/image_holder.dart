@@ -3,11 +3,13 @@ part of focused_image_widget;
 class ImageHolder extends StatefulWidget {
   final DecorationImage? image;
   final Widget child;
+  final String? imageUrl;
 
   const ImageHolder({
     Key? key,
     required this.child,
     this.image,
+    this.imageUrl,
   }) : super(key: key);
 
   @override
@@ -57,6 +59,12 @@ class _ImageHolderState extends State<ImageHolder> {
   }
 
   Future openMenu(BuildContext context) async {
+    if (kIsWeb && widget.imageUrl != null) {
+      final _imageName = DateTime.now().millisecondsSinceEpoch;
+      html.window.open(widget.imageUrl!, _imageName.toString());
+      return null;
+    }
+
     _getOffset();
     return await Navigator.push(
       context,
