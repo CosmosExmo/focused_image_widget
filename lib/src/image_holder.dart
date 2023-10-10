@@ -3,6 +3,7 @@ part of focused_image_widget;
 class ImageHolder extends StatefulWidget {
   final List<DecorationImage> images;
   final Widget child;
+  final String? imageUrl;
   final bool closeOnTap;
   final void Function()? onEnd;
   final void Function()? onClose;
@@ -10,6 +11,8 @@ class ImageHolder extends StatefulWidget {
   const ImageHolder({
     Key? key,
     required this.child,
+    this.image,
+    this.imageUrl,
     required this.images,
     this.closeOnTap = false,
     this.onEnd,
@@ -67,6 +70,12 @@ class _ImageHolderState extends State<ImageHolder> {
   }
 
   Future openMenu(BuildContext context) async {
+    if (kIsWeb && widget.imageUrl != null) {
+      final _imageName = DateTime.now().millisecondsSinceEpoch;
+      html.window.open(widget.imageUrl!, _imageName.toString());
+      return null;
+    }
+
     _getOffset();
     return await Navigator.push(
       context,
