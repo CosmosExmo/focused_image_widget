@@ -1,15 +1,22 @@
 part of focused_image_widget;
 
 class ImageHolder extends StatefulWidget {
-  final DecorationImage? image;
+  final List<DecorationImage> images;
   final Widget child;
   final String? imageUrl;
+  final bool closeOnTap;
+  final void Function()? onEnd;
+  final void Function()? onClose;
 
   const ImageHolder({
     Key? key,
     required this.child,
     this.image,
     this.imageUrl,
+    required this.images,
+    this.closeOnTap = false,
+    this.onEnd,
+    this.onClose,
   }) : super(key: key);
 
   @override
@@ -22,6 +29,10 @@ class _ImageHolderState extends State<ImageHolder> {
   Offset childEndOffset = Offset(0, 0);
   late Size imageContainerSize;
   late Size childSize;
+  bool get closeOnTap => widget.closeOnTap;
+  void Function()? get onEnd => widget.onEnd;
+  void Function()? get onClose => widget.onClose;
+  List<DecorationImage> get images => widget.images;
 
   void _getOffset() {
     RenderBox childRenderBox =
@@ -53,7 +64,7 @@ class _ImageHolderState extends State<ImageHolder> {
   Widget build(BuildContext context) {
     return GestureDetector(
       key: containerKey,
-      onTap: widget.image != null ? () => openMenu(context) : null,
+      onTap: () => openMenu(context),
       child: widget.child,
     );
   }
@@ -74,12 +85,20 @@ class _ImageHolderState extends State<ImageHolder> {
           animation = Tween(begin: 0.0, end: 1.0).animate(animation);
           return FadeTransition(
             opacity: animation,
-            child: _ImageHolderWidget(
-              image: widget.image,
-              childOriginOffset: childOriginOffset,
-              childEndOffset: childEndOffset,
-              imageContainerSize: imageContainerSize,
-              childSize: childSize,
+            child: ChangeNotifierProvider(
+              create: (context) => ImageHolderViewModel(images: images),
+              builder: (context, _) {
+                return _ImageHolderWidget(
+                  childOriginOffset: childOriginOffset,
+                  childEndOffset: childEndOffset,
+                  imageContainerSize: imageContainerSize,
+                  childSize: childSize,
+                  closeOnTap: closeOnTap,
+                  onPop: onClose,
+                  onEnd: onEnd,
+                );
+              },
+              child: widget.child,
             ),
           );
         },
@@ -91,23 +110,32 @@ class _ImageHolderState extends State<ImageHolder> {
 }
 
 class _ImageHolderWidget extends StatelessWidget {
-  final DecorationImage? image;
   final Offset childOriginOffset;
   final Offset childEndOffset;
   final Size imageContainerSize;
   final Size childSize;
+  final bool closeOnTap;
+  final void Function()? onEnd;
+  final void Function()? onPop;
 
   const _ImageHolderWidget({
     Key? key,
-    required this.image,
     required this.childOriginOffset,
     required this.childEndOffset,
     required this.imageContainerSize,
     required this.childSize,
+    required this.closeOnTap,
+    required this.onPop,
+    required this.onEnd,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    popper() {
+      onPop?.call();
+      Navigator.pop(context);
+    }
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Container(
@@ -115,46 +143,107 @@ class _ImageHolderWidget extends StatelessWidget {
           fit: StackFit.expand,
           children: <Widget>[
             GestureDetector(
-              onTap: () => Navigator.pop(context),
+              onTap: closeOnTap ? () => popper() : null,
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
                 child: Container(color: Colors.black.withOpacity(0.7)),
               ),
             ),
-            TweenAnimationBuilder<Offset>(
-              tween: Tween(begin: childOriginOffset, end: childEndOffset),
-              duration: Duration(milliseconds: 200),
-              builder: (context, value, _) {
-                return Positioned(
-                  top: value.dy,
-                  left: value.dx,
-                  child: TweenAnimationBuilder<Size>(
-                    duration: const Duration(milliseconds: 200),
-                    tween: Tween(begin: childSize, end: imageContainerSize),
-                    builder: (context, value1, _) {
-                      return InteractiveViewer(
-                        boundaryMargin: EdgeInsets.all(20),
-                        minScale: 0.1,
-                        maxScale: 3.0,
-                        child: Container(
-                          width: value1.width,
-                          height: value1.height,
-                          decoration: BoxDecoration(
-                            image: image,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+            Selector<ImageHolderViewModel, DecorationImage>(
+                selector: (_, model) => model.currentImage,
+                builder: (context, decorationImage, child) {
+                  return TweenAnimationBuilder<Offset>(
+                    tween: Tween(begin: childOriginOffset, end: childEndOffset),
+                    onEnd: onEnd,
+                    duration: Duration(milliseconds: 200),
+                    builder: (context, value, _) {
+                      return Positioned(
+                        top: value.dy,
+                        left: value.dx,
+                        child: TweenAnimationBuilder<Size>(
+                          duration: const Duration(milliseconds: 200),
+                          tween:
+                              Tween(begin: childSize, end: imageContainerSize),
+                          builder: (__, value1, _) {
+                            return InteractiveViewer(
+                              boundaryMargin: EdgeInsets.all(20),
+                              minScale: 0.1,
+                              maxScale: 3.0,
+                              child: GestureDetector(
+                                onTap: () => popper(),
+                                onHorizontalDragEnd: context
+                                        .read<ImageHolderViewModel>()
+                                        .multipleImages
+                                    ? (details) {
+                                        if ((details.primaryVelocity ?? 0) <= 0)
+                                          context
+                                              .read<ImageHolderViewModel>()
+                                              .next();
+                                        else
+                                          context
+                                              .read<ImageHolderViewModel>()
+                                              .previous();
+                                      }
+                                    : null,
+                                child: Container(
+                                  width: value1.width,
+                                  height: value1.height,
+                                  decoration: BoxDecoration(
+                                    image: decorationImage,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       );
                     },
-                  ),
-                );
-              },
-            ),
+                  );
+                }),
+            Selector<ImageHolderViewModel, bool>(
+                builder: (context, enabled, child) {
+                  if (enabled) {
+                    return Positioned(
+                      bottom: 100,
+                      right: 45,
+                      child: InkWell(
+                        onTap: () =>
+                            context.read<ImageHolderViewModel>().next(),
+                        child: CircleAvatar(
+                          backgroundColor: Theme.of(context).primaryColor,
+                          child: Icon(Icons.arrow_forward),
+                        ),
+                      ),
+                    );
+                  }
+                  return SizedBox.shrink();
+                },
+                selector: (_, model) => model.nextButtonEnabled),
+            Selector<ImageHolderViewModel, bool>(
+                builder: (context, enabled, child) {
+                  if (enabled) {
+                    return Positioned(
+                      bottom: 100,
+                      left: 45,
+                      child: InkWell(
+                        onTap: () =>
+                            context.read<ImageHolderViewModel>().previous(),
+                        child: CircleAvatar(
+                          backgroundColor: Theme.of(context).primaryColor,
+                          child: Icon(Icons.arrow_back),
+                        ),
+                      ),
+                    );
+                  }
+                  return SizedBox.shrink();
+                },
+                selector: (_, model) => model.previousButtonEnabled),
             Positioned(
-              top: 45,
-              right: 60,
+              bottom: 45,
+              right: 45,
               child: InkWell(
-                onTap: () => Navigator.pop(context),
+                onTap: () => popper(),
                 child: CircleAvatar(
                   backgroundColor: Theme.of(context).primaryColor,
                   child: Icon(Icons.close),
