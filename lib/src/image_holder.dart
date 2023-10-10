@@ -11,7 +11,6 @@ class ImageHolder extends StatefulWidget {
   const ImageHolder({
     Key? key,
     required this.child,
-    this.image,
     this.imageUrl,
     required this.images,
     this.closeOnTap = false,
