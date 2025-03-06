@@ -145,7 +145,7 @@ class _ImageHolderWidget extends StatelessWidget {
               onTap: closeOnTap ? () => popper() : null,
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                child: Container(color: Colors.black.withOpacity(0.7)),
+                child: Container(color: Colors.black.withValues(alpha: 0.7)),
               ),
             ),
             Selector<ImageHolderViewModel, DecorationImage>(
