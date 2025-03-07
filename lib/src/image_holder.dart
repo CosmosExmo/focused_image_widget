@@ -71,7 +71,8 @@ class _ImageHolderState extends State<ImageHolder> {
   Future openMenu(BuildContext context) async {
     if (kIsWeb && widget.imageUrl != null) {
       final _imageName = DateTime.now().millisecondsSinceEpoch;
-      html.window.open(widget.imageUrl!, _imageName.toString());
+      final platform = getPlatform();
+      platform.openUrl(widget.imageUrl!, _imageName.toString());
       return null;
     }
 
